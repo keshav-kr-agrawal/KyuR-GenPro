@@ -174,7 +174,6 @@ export default function KyurGenDual() {
       <nav className={`sticky top-0 z-50 border-b backdrop-blur-md transition-colors duration-500 bg-black/80 border-green-900`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
           <BrandLogo theme={'dark'} />
-          {/* Removed Theme Toggle Button */}
           <div className="text-[10px] font-bold tracking-widest text-green-700 animate-pulse">
             SYSTEM_SECURE
           </div>
@@ -189,7 +188,6 @@ export default function KyurGenDual() {
             <h1 className={`text-4xl font-black tracking-tighter mb-2 text-white`}>
               INITIATE <br/> GENERATION.
             </h1>
-            {/* UPDATED TEXT HERE */}
             <p className={`text-xs uppercase tracking-widest text-green-500 font-bold`}>
               Once Pay, Forever Yours. <br/>
               <span className="text-green-800 font-normal">Zero Subscription. 100% Ownership.</span>
@@ -314,8 +312,29 @@ export default function KyurGenDual() {
         </div>
       </main>
 
+      {/* --- SEO OPTIMIZED CONTENT SECTION (NEW) --- */}
+      <section className="max-w-4xl mx-auto px-6 py-12 border-t border-green-900 mb-12">
+        <h2 className="text-2xl font-black text-white mb-8 tracking-tighter">WHY CHOOSE KYURGEN_GHOST?</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs text-green-700 leading-relaxed">
+            <div className="space-y-4">
+                <h3 className="text-green-500 font-bold uppercase tracking-widest">High-Fidelity AI QR Code Generator</h3>
+                <p>Unlike standard generators, KyurGen uses advanced <span className="text-green-400">Stable Diffusion AI</span> to blend your URL into stunning, scannable art. Perfect for marketing, branding, and artistic portfolios.</p>
+                
+                <h3 className="text-green-500 font-bold uppercase tracking-widest">No Subscriptions. 100% Ownership.</h3>
+                <p>Most AI tools trap you in monthly fees. We don't. You pay a small one-time fee to unlock your asset. Once paid, the QR code is <span className="text-green-400">yours forever</span>. No hidden costs.</p>
+            </div>
+            <div className="space-y-4">
+                <h3 className="text-green-500 font-bold uppercase tracking-widest">Hacker-Grade Privacy</h3>
+                <p>We believe in data minimalism. Your prompts and generated images are ephemeral. We do not track your scans or store your data long-term. This is a true <span className="text-green-400">Ghost Protocol</span> tool.</p>
+                
+                <h3 className="text-green-500 font-bold uppercase tracking-widest">Instant & Secure Payment</h3>
+                <p>Powered by Razorpay, our transactions are encrypted and secure. Unlock your high-resolution, watermark-free QR code in seconds for less than the price of a coffee.</p>
+            </div>
+        </div>
+      </section>
+
       {/* PROFESSIONAL FOOTER */}
-      <footer className={`border-t py-12 mt-12 transition-colors duration-500 bg-black border-green-900`}>
+      <footer className={`border-t py-12 transition-colors duration-500 bg-black border-green-900`}>
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
           
           {/* BRAND */}
