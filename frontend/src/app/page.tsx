@@ -1,7 +1,7 @@
 "use client";
 import BrandLogo from '../components/BrandLogo';
 import React, { useState, useEffect } from 'react';
-import { QrCode, Download, Zap, Terminal, Activity, Moon, Sun, Lock, RefreshCw, Trash2, ScanLine, Sparkles, Eye, ExternalLink, Github, Twitter, ShieldCheck } from 'lucide-react';
+import { QrCode, Download, Zap, Sparkles, Eye, ExternalLink, Github, Twitter, ShieldCheck, ScanLine, Trash2, Lock, Sun } from 'lucide-react';
 import HackerTerminal from '../components/HackerTerminal';
 
 // *** IMAGE CONFIG ***
@@ -29,8 +29,8 @@ export default function KyurGenDual() {
   const [displayImage, setDisplayImage] = useState<string | null>(null);
   const [isIndian, setIsIndian] = useState(false);
 
-  // CONFIG
-  const API_BASE = 'http://127.0.0.1:5001'; 
+  // *** PRODUCTION CONFIG (UPDATED) ***
+  const API_BASE = 'https://kyur-genpro.onrender.com'; 
 
   useEffect(() => {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -62,7 +62,7 @@ export default function KyurGenDual() {
         throw new Error("Generation failed");
       }
     } catch (e) {
-      alert("Backend Error: Ensure 'server.py' is running on port 5001.");
+      alert("Backend Error: The server is waking up (it may take 50 seconds on the free plan). Please try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -100,13 +100,12 @@ export default function KyurGenDual() {
 
     try {
       // 2. Create Order on Backend
-      // Amount: Standard = 9 INR, AI = 13 INR
       const amount = activeTab === 'standard' ? 9 : 13; 
       
       const orderRes = await fetch(`${API_BASE}/create-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: amount * 100 }) // Convert to Paise (13 -> 1300)
+          body: JSON.stringify({ amount: amount * 100 }) // Convert to Paise
       });
       const orderData = await orderRes.json();
 
@@ -147,7 +146,7 @@ export default function KyurGenDual() {
           }
         },
         theme: {
-          color: isDark ? "#22c55e" : "#000000", // Matches Green-500 or Black
+          color: isDark ? "#22c55e" : "#000000",
         },
       };
 
@@ -169,7 +168,6 @@ export default function KyurGenDual() {
   const cardBg = isDark ? "bg-black border-green-500/30" : "bg-white border-gray-200";
   const btnPrimary = isDark ? "bg-green-900/20 text-green-500 border border-green-500 hover:bg-green-500 hover:text-black" : "bg-black text-white hover:bg-gray-800 border border-black";
   const footerText = isDark ? "text-green-800" : "text-gray-500";
-  // Price display logic
   const displayPrice = isIndian ? (activeTab === 'standard'?"₹9":"₹13") : (activeTab==='standard'?"$0.10":"$0.15");
 
   return (
