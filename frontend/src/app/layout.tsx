@@ -19,10 +19,16 @@ export const metadata: Metadata = {
   description: "Generate artistic, high-fidelity AI QR codes instantly. No subscription. Pay once, own forever. Secure, ephemeral, and 100% anonymous.",
   keywords: ["AI QR Code", "Stable Diffusion QR", "Artistic QR Generator", "Hacker QR Code", "Best QR Code Generator", "No Subscription AI"],
   authors: [{ name: "Keshav Agrawal", url: "https://keshav-portfolio-vert.vercel.app" }],
+  
+  // 👇 GOOGLE VERIFICATION CODE ADDED HERE
+  verification: {
+    google: "4dkgKoWfBhnqgCSDBXHrcsrwVWQnuGtVurLie9oOhTk",
+  },
+
   openGraph: {
     title: "KyurGen_GHOST | The AI QR Terminal",
     description: "Create undetectable, artistic AI QR codes. 100% Ownership. Zero Subscriptions.",
-    url: "https://kyurgen.xyz", // ⚠️ UPDATE THIS once you buy the domain
+    url: "https://kyu-r-gen-pro.vercel.app", // Using Vercel link for now
     siteName: "KyurGen Labs",
     images: [
       {
