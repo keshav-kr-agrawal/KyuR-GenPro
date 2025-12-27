@@ -1,8 +1,7 @@
 "use client";
 import BrandLogo from '../components/BrandLogo';
-import React, { useState, useEffect } from 'react';
-import { QrCode, Download, Zap, Sparkles, Eye, ExternalLink, Github, Twitter, ShieldCheck, ScanLine, Trash2, Lock } from 'lucide-react';
-import HackerTerminal from '../components/HackerTerminal';
+import React, { useState, useEffect, useRef } from 'react';
+import { QrCode, Download, Zap, Sparkles, Eye, ExternalLink, Github, Twitter, ShieldCheck, ScanLine, Trash2, Lock, XCircle, MousePointer2, Crosshair } from 'lucide-react';
 
 // *** IMAGE CONFIG ***
 const IDLE_AI_IMAGE = "/water-qr.jpg"; 
@@ -18,18 +17,35 @@ const loadRazorpay = () => {
   });
 };
 
+// *** TYPE FOR GAME BUBBLES ***
+type Bubble = {
+  id: number;
+  x: number;
+  y: number;
+};
+
 export default function KyurGenDual() {
-  // 1. FORCED DARK THEME (No more light mode)
   const theme = 'dark'; 
   
   const [activeTab, setActiveTab] = useState<'standard' | 'ai'>('standard');
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState('https://'); // PRE-FILLED HTTPS
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'preview' | 'purchased'>('idle');
   const [artId, setArtId] = useState<string | null>(null);
   const [displayImage, setDisplayImage] = useState<string | null>(null);
   const [isIndian, setIsIndian] = useState(false);
+
+  // *** GAME STATE ***
+  const [gameScore, setGameScore] = useState(0);
+  const [bubbles, setBubbles] = useState<Bubble[]>([]);
+  const gameIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // *** PRICING CONFIG ***
+  const BASE_PRICE_STD_INR = 15;
+  const BASE_PRICE_AI_INR = 19;
+  const BASE_PRICE_STD_USD = 0.50;
+  const BASE_PRICE_AI_USD = 0.99;
 
   // *** PRODUCTION CONFIG ***
   const API_BASE = 'https://kyur-genpro.onrender.com'; 
@@ -39,8 +55,50 @@ export default function KyurGenDual() {
     setIsIndian(tz.includes("India") || tz.includes("Calcutta"));
   }, []);
 
+  // *** GAME LOGIC ***
+  useEffect(() => {
+    if (loading) {
+      setGameScore(0);
+      setBubbles([]);
+      // Spawn bubbles every 500ms
+      gameIntervalRef.current = setInterval(() => {
+        const newBubble = {
+          id: Date.now(),
+          x: Math.random() * 80 + 10, // Keep within 10-90% width
+          y: Math.random() * 80 + 10,
+        };
+        setBubbles((prev) => [...prev, newBubble]);
+      }, 500);
+    } else {
+      if (gameIntervalRef.current) clearInterval(gameIntervalRef.current);
+    }
+    return () => {
+      if (gameIntervalRef.current) clearInterval(gameIntervalRef.current);
+    };
+  }, [loading]);
+
+  const popBubble = (id: number) => {
+    setBubbles((prev) => prev.filter((b) => b.id !== id));
+    setGameScore((prev) => prev + 1); // 1 Click = 1% Discount
+  };
+
+  // *** CALCULATE FINAL DISCOUNTED PRICE ***
+  const getFinalPrice = () => {
+    const base = isIndian 
+      ? (activeTab === 'standard' ? BASE_PRICE_STD_INR : BASE_PRICE_AI_INR)
+      : (activeTab === 'standard' ? BASE_PRICE_STD_USD : BASE_PRICE_AI_USD);
+    
+    // Cap discount at 60% so it's never free
+    const discountPercent = Math.min(gameScore, 60); 
+    
+    const final = base * (1 - discountPercent / 100);
+    
+    // Round for clean display
+    return isIndian ? Math.ceil(final) : Number(final.toFixed(2));
+  };
+
   const handleGenerate = async () => {
-    if (!url) return alert("URL REQUIRED");
+    if (!url || url.length < 10) return alert("VALID URL REQUIRED");
     setLoading(true);
     setStatus('idle');
     setArtId(null);
@@ -64,7 +122,7 @@ export default function KyurGenDual() {
         throw new Error("Generation failed");
       }
     } catch (e) {
-      alert("Backend Error: The server is waking up (it may take 50 seconds on the free plan). Please try again in a moment.");
+      alert("Backend Error: The server is waking up (it may take 50 seconds on the free plan). Please play the game while you wait!");
     } finally {
       setLoading(false);
     }
@@ -72,7 +130,7 @@ export default function KyurGenDual() {
 
   const handleRegenerate = async () => {
     if (!window.confirm("Discard this design?")) return;
-    setLoading(true);
+    setLoading(true); // Triggers game again
     if (artId) await fetch(`${API_BASE}/regenerate`, { method: 'POST', body: JSON.stringify({ art_id: artId }), headers: {'Content-Type': 'application/json'} });
     setStatus('idle');
     setDisplayImage(null);
@@ -84,28 +142,28 @@ export default function KyurGenDual() {
   const handlePay = async () => {
     if (!artId) return;
     
-    const confirmMsg = activeTab === 'standard' 
-      ? `Pay ₹9 to remove watermark?` 
-      : `Pay ₹13 to unlock Real AI QR?`;
+    const finalPrice = getFinalPrice();
+    const currencySymbol = isIndian ? '₹' : '$';
+    
+    const confirmMsg = `Pay discounted price of ${currencySymbol}${finalPrice} to unlock?`;
       
     if (!window.confirm(confirmMsg)) return;
 
-    setLoading(true);
+    setLoading(true); // Show loader (game) again briefly during payment setup
 
     const res = await loadRazorpay();
     if (!res) {
-      alert("Razorpay SDK failed to load. Are you online?");
+      alert("Razorpay SDK failed.");
       setLoading(false);
       return;
     }
 
     try {
-      const amount = activeTab === 'standard' ? 9 : 13; 
-      
+      // Send calculated amount to backend (x100 for paise/cents)
       const orderRes = await fetch(`${API_BASE}/create-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: amount * 100 }) 
+          body: JSON.stringify({ amount: Math.ceil(finalPrice * 100) }) 
       });
       const orderData = await orderRes.json();
 
@@ -120,7 +178,7 @@ export default function KyurGenDual() {
         amount: orderData.amount,
         currency: "INR",
         name: "KyurGen Lab",
-        description: activeTab === 'standard' ? "Standard QR Unlock" : "AI Art QR Unlock",
+        description: "Asset Unlock",
         order_id: orderData.id,
         handler: async function (response: any) {
           const verifyRes = await fetch(`${API_BASE}/verify-payment`, {
@@ -140,12 +198,10 @@ export default function KyurGenDual() {
               setStatus('purchased');
               alert("Payment Successful! Asset Unlocked.");
           } else {
-              alert("Verification Failed! Contact Support.");
+              alert("Verification Failed!");
           }
         },
-        theme: {
-          color: "#22c55e", // Green for hacker theme
-        },
+        theme: { color: "#22c55e" },
       };
 
       const paymentObject = new (window as any).Razorpay(options);
@@ -159,13 +215,17 @@ export default function KyurGenDual() {
     }
   };
 
-  // STYLES (Locked to Dark Mode)
+  // STYLES
   const bgMain = "bg-black";
   const textMain = "text-green-500";
-  const cardBg = "bg-black border-green-500/30";
-  const btnPrimary = "bg-green-900/20 text-green-500 border border-green-500 hover:bg-green-500 hover:text-black";
+  const cardBg = "bg-zinc-900/50 border-green-500/50"; // INCREASED VISIBILITY
+  const btnPrimary = "bg-green-600 text-black border border-green-500 hover:bg-green-400 font-bold shadow-[0_0_15px_rgba(34,197,94,0.4)]"; // BRIGHTER BUTTON
   const footerText = "text-green-800";
-  const displayPrice = isIndian ? (activeTab === 'standard'?"₹9":"₹13") : (activeTab==='standard'?"$0.10":"$0.15");
+  
+  const finalDisplayPrice = isIndian ? `₹${getFinalPrice()}` : `$${getFinalPrice()}`;
+  const baseDisplayPrice = isIndian 
+      ? (activeTab === 'standard' ? `₹${BASE_PRICE_STD_INR}` : `₹${BASE_PRICE_AI_INR}`)
+      : (activeTab === 'standard' ? `$${BASE_PRICE_STD_USD}` : `$${BASE_PRICE_AI_USD}`);
 
   return (
     <div className={`min-h-screen font-mono transition-colors duration-500 flex flex-col ${bgMain} ${textMain}`}>
@@ -210,40 +270,68 @@ export default function KyurGenDual() {
           </div>
 
           <div className={`p-6 rounded-lg shadow-sm space-y-6 relative border transition-colors duration-500 ${cardBg}`}>
-            <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} className={`w-full outline-none py-3 text-sm font-bold border-b-2 bg-transparent transition-all border-green-900 focus:border-green-500 text-white placeholder-green-900`} placeholder="https://..." />
+            {/* IMPROVED VISIBILITY INPUT */}
+            <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-green-400">Target URL</label>
+                <input 
+                    type="text" 
+                    value={url} 
+                    onChange={(e) => setUrl(e.target.value)} 
+                    className={`w-full outline-none py-3 px-4 rounded bg-green-900/20 border border-green-700 focus:border-green-400 text-white placeholder-green-700 font-bold transition-all`} 
+                />
+            </div>
             
             {activeTab === 'ai' && (
-               <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className={`w-full outline-none py-3 text-sm font-bold border-b-2 bg-transparent transition-all h-24 resize-none border-green-900 focus:border-green-500 text-white placeholder-green-900`} placeholder="> Describe visual style (e.g. 'cyberpunk city, neon')" />
+               <div className="space-y-1">
+                   <label className="text-[10px] font-bold uppercase tracking-widest text-green-400">AI Art Prompt</label>
+                   <textarea 
+                    value={prompt} 
+                    onChange={(e) => setPrompt(e.target.value)} 
+                    className={`w-full outline-none py-3 px-4 rounded bg-green-900/20 border border-green-700 focus:border-green-400 text-white placeholder-green-700 font-bold transition-all h-24 resize-none`} 
+                    placeholder="> e.g. 'Cyberpunk city, red neon lights'" 
+                   />
+               </div>
             )}
 
-            <button onClick={handleGenerate} disabled={loading} className={`w-full font-black text-sm py-4 uppercase tracking-widest transition-all ${btnPrimary}`}>
-              {loading ? "PROCESSING..." : "EXECUTE"}
+            <button onClick={handleGenerate} disabled={loading} className={`w-full text-sm py-4 uppercase tracking-widest transition-all rounded ${btnPrimary}`}>
+              {loading ? "CALCULATING..." : "EXECUTE"}
             </button>
           </div>
         </div>
 
-        {/* RIGHT: OUTPUT */}
-        <div className={`lg:col-span-7 rounded-lg border shadow-sm p-2 flex flex-col relative min-h-[500px] transition-colors duration-500 ${cardBg}`}>
+        {/* RIGHT: OUTPUT / GAME */}
+        <div className={`lg:col-span-7 rounded-lg border shadow-sm p-2 flex flex-col relative min-h-[500px] transition-colors duration-500 overflow-hidden ${cardBg}`}>
            
-           {/* UNIFIED SUPER LOADING SCREEN */}
+           {/* === GAMIFIED LOADING SCREEN === */}
            {loading && (
-             <div className="absolute inset-0 z-20 p-4 bg-black/95 backdrop-blur-md flex flex-col justify-center items-center">
-               <div className="w-full max-w-md">
-                   <HackerTerminal theme={'dark'} />
-               </div>
-               
-               <div className="mt-8 text-center space-y-2 animate-pulse">
-                   <p className="text-green-500 font-bold tracking-widest text-xs uppercase">
-                       ESTABLISHING SECURE CONNECTION...
-                   </p>
-                   <p className="text-green-800 text-[10px] max-w-xs mx-auto">
-                       (Server waking up... please hold.)
-                   </p>
-               </div>
+             <div className="absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center cursor-crosshair">
+                <div className="absolute top-4 left-0 w-full text-center z-30">
+                    <p className="text-green-500 font-black text-xl tracking-tighter animate-pulse">SYSTEM HACK IN PROGRESS...</p>
+                    <p className="text-white text-xs mt-2 uppercase tracking-widest bg-green-900/50 inline-block px-3 py-1 rounded border border-green-500">
+                        <MousePointer2 className="inline w-3 h-3 mb-1 mr-1"/> Click Bubbles to Slash Price!
+                    </p>
+                    <div className="flex justify-center gap-8 mt-4 text-sm font-bold">
+                        <div className="text-red-500 line-through opacity-50">{baseDisplayPrice}</div>
+                        <div className="text-green-400 text-2xl animate-bounce">{finalDisplayPrice}</div>
+                    </div>
+                    <div className="text-[10px] text-green-700 mt-1">HACK SCORE: {gameScore}% DISCOUNT</div>
+                </div>
+
+                {/* THE BUBBLES */}
+                {bubbles.map(b => (
+                    <button
+                        key={b.id}
+                        onClick={() => popBubble(b.id)}
+                        style={{ top: `${b.y}%`, left: `${b.x}%` }}
+                        className="absolute w-12 h-12 rounded-full bg-green-500/20 border-2 border-green-400 text-green-400 flex items-center justify-center animate-ping hover:bg-green-500 hover:text-black transition-all cursor-pointer"
+                    >
+                        <Crosshair size={20}/>
+                    </button>
+                ))}
              </div>
            )}
 
-           {/* 3. IDLE STATE */}
+           {/* IDLE STATE */}
            {!loading && !displayImage && (
              <div className="flex-1 flex flex-col items-center justify-center opacity-30 border-2 border-dashed m-4 rounded border-current">
                 {activeTab === 'ai' ? (
@@ -260,28 +348,37 @@ export default function KyurGenDual() {
              </div>
            )}
 
-           {/* 4. RESULT STATE */}
+           {/* RESULT STATE */}
            {!loading && displayImage && (
              <div className="flex-1 flex flex-col items-center justify-center animate-in zoom-in-95 duration-300 p-8 w-full">
                
-               {/* IMAGE FRAME */}
+               {/* IMAGE FRAME WITH ANTI-THEFT OVERLAY */}
                <div className={`relative p-2 border-2 shadow-2xl mb-6 group bg-black border-green-900`}>
+                  
+                  {/* PREVIEW BADGE */}
                   {status === 'preview' && (
                     <div className={`absolute -top-3 -right-3 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-md z-30 ${activeTab === 'ai' ? 'bg-blue-600' : 'bg-red-600'}`}>
                         {activeTab === 'ai' ? <><Eye size={12}/> SAMPLE VIEW</> : <><Lock size={12}/> PREVIEW MODE</>}
                     </div>
                   )}
-                  {status === 'purchased' && (
-                    <div className="absolute -top-3 -right-3 bg-green-600 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-md z-30">
-                        <Zap size={12} /> UNLOCKED
-                    </div>
+
+                  {/* === THE RED CROSS (ANTI-SCREENSHOT) === */}
+                  {status === 'preview' && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none opacity-60">
+                          <XCircle className="text-red-600 w-full h-full p-8" strokeWidth={1} />
+                          <div className="absolute text-red-600 font-black text-2xl -rotate-12 bg-black px-2 border border-red-600">PREVIEW ONLY</div>
+                      </div>
                   )}
+
                   <img src={displayImage} alt="Result" className="w-full max-w-[280px] object-cover relative z-10" />
                </div>
 
                {/* STATUS TEXT */}
                {status === 'preview' && (
                  <div className="text-center mb-6">
+                    <div className="text-[10px] text-green-500 font-bold mb-2">
+                        YOU HACKED {gameScore}% OFF!
+                    </div>
                     {activeTab === 'standard' ? (
                         <div className="text-[10px] text-red-500 font-bold flex items-center gap-1 justify-center"><ScanLine size={12}/> WATERMARKED. PAY TO REMOVE.</div>
                     ) : (
@@ -294,11 +391,11 @@ export default function KyurGenDual() {
                <div className="w-full max-w-sm space-y-3">
                  {status === 'preview' ? (
                     <>
-                        <button onClick={handlePay} className="w-full bg-green-600 hover:bg-green-500 text-black font-bold py-4 shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-sm rounded-lg">
-                            <Download size={16} /> Pay {displayPrice} & Unlock
+                        <button onClick={handlePay} className="w-full bg-green-600 hover:bg-green-500 text-black font-bold py-4 shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-sm rounded-lg animate-pulse">
+                            <Download size={16} /> Pay {finalDisplayPrice} & Unlock
                         </button>
                         <button onClick={handleRegenerate} className={`w-full font-bold py-3 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-[10px] rounded-lg border border-red-900 text-red-500 hover:bg-red-900/20`}>
-                            <Trash2 size={12} /> Discard
+                            <Trash2 size={12} /> Discard & Retry
                         </button>
                     </>
                  ) : (
@@ -312,23 +409,21 @@ export default function KyurGenDual() {
         </div>
       </main>
 
-      {/* --- SEO OPTIMIZED CONTENT SECTION (NEW) --- */}
+      {/* SEO SECTION */}
       <section className="max-w-4xl mx-auto px-6 py-12 border-t border-green-900 mb-12">
         <h2 className="text-2xl font-black text-white mb-8 tracking-tighter">WHY CHOOSE KYURGEN_GHOST?</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs text-green-700 leading-relaxed">
             <div className="space-y-4">
                 <h3 className="text-green-500 font-bold uppercase tracking-widest">High-Fidelity AI QR Code Generator</h3>
-                <p>Unlike standard generators, KyurGen uses advanced <span className="text-green-400">Stable Diffusion AI</span> to blend your URL into stunning, scannable art. Perfect for marketing, branding, and artistic portfolios.</p>
-                
+                <p>Unlike standard generators, KyurGen uses advanced <span className="text-green-400">Stable Diffusion AI</span> to blend your URL into stunning, scannable art.</p>
                 <h3 className="text-green-500 font-bold uppercase tracking-widest">No Subscriptions. 100% Ownership.</h3>
-                <p>Most AI tools trap you in monthly fees. We don't. You pay a small one-time fee to unlock your asset. Once paid, the QR code is <span className="text-green-400">yours forever</span>. No hidden costs.</p>
+                <p>We don't trap you in monthly fees. You pay a small one-time fee. The QR code is <span className="text-green-400">yours forever</span>.</p>
             </div>
             <div className="space-y-4">
                 <h3 className="text-green-500 font-bold uppercase tracking-widest">Hacker-Grade Privacy</h3>
-                <p>We believe in data minimalism. Your prompts and generated images are ephemeral. We do not track your scans or store your data long-term. This is a true <span className="text-green-400">Ghost Protocol</span> tool.</p>
-                
+                <p>We believe in data minimalism. Your prompts and generated images are ephemeral. This is a true <span className="text-green-400">Ghost Protocol</span> tool.</p>
                 <h3 className="text-green-500 font-bold uppercase tracking-widest">Instant & Secure Payment</h3>
-                <p>Powered by Razorpay, our transactions are encrypted and secure. Unlock your high-resolution, watermark-free QR code in seconds for less than the price of a coffee.</p>
+                <p>Powered by Razorpay, our transactions are encrypted and secure.</p>
             </div>
         </div>
       </section>
@@ -336,8 +431,6 @@ export default function KyurGenDual() {
       {/* PROFESSIONAL FOOTER */}
       <footer className={`border-t py-12 transition-colors duration-500 bg-black border-green-900`}>
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
-          
-          {/* BRAND */}
           <div className="col-span-1 md:col-span-2 space-y-4">
             <div className="font-bold text-lg tracking-tighter flex items-center gap-2 text-green-500">
                 <div className={`w-3 h-3 bg-green-500`}></div>
@@ -347,24 +440,14 @@ export default function KyurGenDual() {
               The world's first ephemeral, high-fidelity AI asset generator. 
               Zero data retention. Zero tracking. 100% ownership.
             </p>
-            <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${footerText}`}>
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              All Systems Operational
-            </div>
           </div>
-
-          {/* PROTOCOL */}
           <div className="space-y-4">
             <h4 className={`text-xs font-bold uppercase tracking-widest text-white`}>Legal</h4>
             <ul className={`space-y-2 text-xs ${footerText}`}>
               <li><a href="/legal/privacy" className="hover:underline flex items-center gap-1"><ShieldCheck size={10}/> Privacy Policy</a></li>
               <li><a href="/legal/terms" className="hover:underline">Terms & Conditions</a></li>
-              <li><a href="/legal/refund" className="hover:underline">Refund Policy</a></li>
-              <li><a href="/contact" className="hover:underline">Contact Us</a></li>
             </ul>
           </div>
-
-          {/* ARCHITECT */}
           <div className="space-y-4">
             <h4 className={`text-xs font-bold uppercase tracking-widest text-white`}>Architect</h4>
             <div className={`text-xs space-y-1 ${footerText}`}>
@@ -382,7 +465,6 @@ export default function KyurGenDual() {
               <Twitter size={16} className={`cursor-pointer ${footerText} hover:text-green-500`}/>
             </div>
           </div>
-
         </div>
       </footer>
     </div>
