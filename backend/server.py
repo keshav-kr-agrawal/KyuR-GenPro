@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 # *** IMPORT THE AI LOGIC ***
 from ai_engine import generate_ai_qr
 
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
@@ -28,6 +29,10 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 # Initialize Clients
+# Check if keys exist to prevent crash on start
+if not RAZORPAY_KEY_ID or not SUPABASE_URL:
+    print("⚠️ WARNING: Missing API Keys in environment variables.")
+
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 SUPABASE_BUCKET = "qr-assets" # Ensure this bucket exists in your Supabase Storage
@@ -90,6 +95,10 @@ def apply_ai_glitch(input_path, output_path):
 # ==========================================
 # 3. ROUTES
 # ==========================================
+
+@app.route('/', methods=['GET'])
+def health_check():
+    return jsonify({"status": "active", "service": "KyurGen-Backend"}), 200
 
 @app.route('/create-order', methods=['POST'])
 def create_order():
@@ -200,5 +209,13 @@ def _handle_cors():
     response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
     return response
 
+# ==========================================
+# 4. EXECUTION (CLOUD READY)
+# ==========================================
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    # ⚠️ CRITICAL: Render sets the PORT env var. We must listen on it.
+    port = int(os.environ.get("PORT", 5001))
+    
+    # Run on 0.0.0.0 to be accessible from the internet
+    print(f"🚀 Server starting on port {port}...")
+    app.run(host='0.0.0.0', port=port)
