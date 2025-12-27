@@ -23,10 +23,14 @@ CORS(app)
 # 1. CREDENTIALS (PASTE YOUR KEYS HERE)
 # ==========================================
 
-RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
-RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+RAZORPAY_KEY_ID = "rzp_live_RwLmKVXHqRmwiN"
+
+RAZORPAY_KEY_SECRET = "rIhOz9fNnOL29cgeY8RfD7nR"
+
+
+SUPABASE_URL = "https://gppeuzpvnypouhaktczn.supabase.co"     
+
+SUPABASE_KEY = "sb_secret_voqV6IJNe7DAORESkQMoTg_VhxvDUyF"                         
 
 # Initialize Clients
 # Check if keys exist to prevent crash on start

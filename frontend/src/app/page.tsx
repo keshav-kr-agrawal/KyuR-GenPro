@@ -29,7 +29,7 @@ export default function KyurGenDual() {
   const [displayImage, setDisplayImage] = useState<string | null>(null);
   const [isIndian, setIsIndian] = useState(false);
 
-  // *** PRODUCTION CONFIG (UPDATED) ***
+  // *** PRODUCTION CONFIG ***
   const API_BASE = 'https://kyur-genpro.onrender.com'; 
 
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function KyurGenDual() {
     setLoading(false);
   };
 
-  // *** UPDATED PAYMENT HANDLER ***
+  // *** PAYMENT HANDLER ***
   const handlePay = async () => {
     if (!artId) return;
     
@@ -224,17 +224,21 @@ export default function KyurGenDual() {
         {/* RIGHT: OUTPUT */}
         <div className={`lg:col-span-7 rounded-lg border shadow-sm p-2 flex flex-col relative min-h-[500px] transition-colors duration-500 ${cardBg}`}>
            
-           {/* 1. AI LOADING: HACKER TERMINAL */}
-           {loading && activeTab === 'ai' && (
-             <div className="absolute inset-0 z-20 p-4 bg-black/90 backdrop-blur-md flex flex-col justify-center">
-                <HackerTerminal theme={theme} />
-             </div>
-           )}
-
-           {/* 2. STANDARD LOADING: SPINNER */}
-           {loading && activeTab === 'standard' && (
-             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-               <div className={`w-12 h-12 border-4 border-t-transparent rounded-full animate-spin ${isDark ? 'border-green-500' : 'border-white'}`}></div>
+           {/* UNIFIED SUPER LOADING SCREEN */}
+           {loading && (
+             <div className="absolute inset-0 z-20 p-4 bg-black/95 backdrop-blur-md flex flex-col justify-center items-center">
+               <div className="w-full max-w-md">
+                   <HackerTerminal theme={theme} />
+               </div>
+               
+               <div className="mt-8 text-center space-y-2 animate-pulse">
+                   <p className="text-green-500 font-bold tracking-widest text-xs uppercase">
+                       ESTABLISHING SECURE CONNECTION...
+                   </p>
+                   <p className="text-gray-600 text-[10px] max-w-xs mx-auto">
+                       (Server may be waking up from sleep mode. This can take up to 50s for the first run. Please hold.)
+                   </p>
+               </div>
              </div>
            )}
 
