@@ -60,11 +60,10 @@ export default function KyurGenDual() {
     if (loading) {
       setGameScore(0);
       setBubbles([]);
-      // Spawn bubbles every 500ms
       gameIntervalRef.current = setInterval(() => {
         const newBubble = {
           id: Date.now(),
-          x: Math.random() * 80 + 10, // Keep within 10-90% width
+          x: Math.random() * 80 + 10,
           y: Math.random() * 80 + 10,
         };
         setBubbles((prev) => [...prev, newBubble]);
@@ -79,21 +78,15 @@ export default function KyurGenDual() {
 
   const popBubble = (id: number) => {
     setBubbles((prev) => prev.filter((b) => b.id !== id));
-    setGameScore((prev) => prev + 1); // 1 Click = 1% Discount
+    setGameScore((prev) => prev + 1);
   };
 
-  // *** CALCULATE FINAL DISCOUNTED PRICE ***
   const getFinalPrice = () => {
     const base = isIndian 
       ? (activeTab === 'standard' ? BASE_PRICE_STD_INR : BASE_PRICE_AI_INR)
       : (activeTab === 'standard' ? BASE_PRICE_STD_USD : BASE_PRICE_AI_USD);
-    
-    // Cap discount at 60% so it's never free
     const discountPercent = Math.min(gameScore, 60); 
-    
     const final = base * (1 - discountPercent / 100);
-    
-    // Round for clean display
     return isIndian ? Math.ceil(final) : Number(final.toFixed(2));
   };
 
@@ -103,9 +96,7 @@ export default function KyurGenDual() {
     setStatus('idle');
     setArtId(null);
     setDisplayImage(null);
-
     const endpoint = activeTab === 'standard' ? `${API_BASE}/generate/standard` : `${API_BASE}/generate/ai`;
-
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -113,7 +104,6 @@ export default function KyurGenDual() {
         body: JSON.stringify({ url, prompt: prompt || "cyberpunk city, neon lights" })
       });
       const data = await res.json();
-      
       if (data.art_id) {
         setArtId(data.art_id);
         setDisplayImage(data.preview_url);
@@ -122,7 +112,7 @@ export default function KyurGenDual() {
         throw new Error("Generation failed");
       }
     } catch (e) {
-      alert("Backend Error: The server is waking up (it may take 50 seconds on the free plan). Please play the game while you wait!");
+      alert("Backend Error: The server is waking up. Please play the game while you wait!");
     } finally {
       setLoading(false);
     }
@@ -130,7 +120,7 @@ export default function KyurGenDual() {
 
   const handleRegenerate = async () => {
     if (!window.confirm("Discard this design?")) return;
-    setLoading(true); // Triggers game again
+    setLoading(true);
     if (artId) await fetch(`${API_BASE}/regenerate`, { method: 'POST', body: JSON.stringify({ art_id: artId }), headers: {'Content-Type': 'application/json'} });
     setStatus('idle');
     setDisplayImage(null);
@@ -138,41 +128,31 @@ export default function KyurGenDual() {
     setLoading(false);
   };
 
-  // *** PAYMENT HANDLER ***
   const handlePay = async () => {
     if (!artId) return;
-    
     const finalPrice = getFinalPrice();
     const currencySymbol = isIndian ? '₹' : '$';
-    
     const confirmMsg = `Pay discounted price of ${currencySymbol}${finalPrice} to unlock?`;
-      
     if (!window.confirm(confirmMsg)) return;
-
-    setLoading(true); // Show loader (game) again briefly during payment setup
-
+    setLoading(true);
     const res = await loadRazorpay();
     if (!res) {
       alert("Razorpay SDK failed.");
       setLoading(false);
       return;
     }
-
     try {
-      // Send calculated amount to backend (x100 for paise/cents)
       const orderRes = await fetch(`${API_BASE}/create-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ amount: Math.ceil(finalPrice * 100) }) 
       });
       const orderData = await orderRes.json();
-
       if (orderData.error) {
           alert("Server Error: " + orderData.error);
           setLoading(false);
           return;
       }
-
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.amount,
@@ -191,7 +171,6 @@ export default function KyurGenDual() {
                   art_id: artId
               })
           });
-          
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
               setDisplayImage(verifyData.download_url);
@@ -203,25 +182,20 @@ export default function KyurGenDual() {
         },
         theme: { color: "#22c55e" },
       };
-
       const paymentObject = new (window as any).Razorpay(options);
       paymentObject.open();
-      
     } catch (e) {
-      console.error(e);
       alert("Payment initiation failed.");
     } finally {
       setLoading(false);
     }
   };
 
-  // STYLES
   const bgMain = "bg-black";
   const textMain = "text-green-500";
-  const cardBg = "bg-zinc-900/50 border-green-500/50"; // INCREASED VISIBILITY
-  const btnPrimary = "bg-green-600 text-black border border-green-500 hover:bg-green-400 font-bold shadow-[0_0_15px_rgba(34,197,94,0.4)]"; // BRIGHTER BUTTON
+  const cardBg = "bg-zinc-900/50 border-green-500/50"; 
+  const btnPrimary = "bg-green-600 text-black border border-green-500 hover:bg-green-400 font-bold shadow-[0_0_15px_rgba(34,197,94,0.4)]"; 
   const footerText = "text-green-800";
-  
   const finalDisplayPrice = isIndian ? `₹${getFinalPrice()}` : `$${getFinalPrice()}`;
   const baseDisplayPrice = isIndian 
       ? (activeTab === 'standard' ? `₹${BASE_PRICE_STD_INR}` : `₹${BASE_PRICE_AI_INR}`)
@@ -230,7 +204,6 @@ export default function KyurGenDual() {
   return (
     <div className={`min-h-screen font-mono transition-colors duration-500 flex flex-col ${bgMain} ${textMain}`}>
       
-      {/* NAVBAR */}
       <nav className={`sticky top-0 z-50 border-b backdrop-blur-md transition-colors duration-500 bg-black/80 border-green-900`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
           <BrandLogo theme={'dark'} />
@@ -270,7 +243,6 @@ export default function KyurGenDual() {
           </div>
 
           <div className={`p-6 rounded-lg shadow-sm space-y-6 relative border transition-colors duration-500 ${cardBg}`}>
-            {/* IMPROVED VISIBILITY INPUT */}
             <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-green-400">Target URL</label>
                 <input 
@@ -296,13 +268,29 @@ export default function KyurGenDual() {
             <button onClick={handleGenerate} disabled={loading} className={`w-full text-sm py-4 uppercase tracking-widest transition-all rounded ${btnPrimary}`}>
               {loading ? "CALCULATING..." : "EXECUTE"}
             </button>
+
+            {/* PRODUCT HUNT BADGE EMBED */}
+            <div className="flex justify-center pt-4 border-t border-green-900/30">
+                <a 
+                  href="https://www.producthunt.com/products/kyurgen_ghost?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-kyurgen_ghost" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:scale-105 transition-transform duration-300 drop-shadow-[0_0_8px_rgba(34,197,94,0.3)]"
+                >
+                    <img 
+                      alt="KyurGen_GHOST - AI QR Generator with a bubble game that hacks the price. | Product Hunt" 
+                      width="250" 
+                      height="54" 
+                      src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1055163&theme=light&t=1766870403863" 
+                    />
+                </a>
+            </div>
           </div>
         </div>
 
         {/* RIGHT: OUTPUT / GAME */}
         <div className={`lg:col-span-7 rounded-lg border shadow-sm p-2 flex flex-col relative min-h-[500px] transition-colors duration-500 overflow-hidden ${cardBg}`}>
            
-           {/* === GAMIFIED LOADING SCREEN === */}
            {loading && (
              <div className="absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center cursor-crosshair">
                 <div className="absolute top-4 left-0 w-full text-center z-30">
@@ -317,7 +305,6 @@ export default function KyurGenDual() {
                     <div className="text-[10px] text-green-700 mt-1">HACK SCORE: {gameScore}% DISCOUNT</div>
                 </div>
 
-                {/* THE BUBBLES */}
                 {bubbles.map(b => (
                     <button
                         key={b.id}
@@ -331,7 +318,6 @@ export default function KyurGenDual() {
              </div>
            )}
 
-           {/* IDLE STATE */}
            {!loading && !displayImage && (
              <div className="flex-1 flex flex-col items-center justify-center opacity-30 border-2 border-dashed m-4 rounded border-current">
                 {activeTab === 'ai' ? (
@@ -348,21 +334,16 @@ export default function KyurGenDual() {
              </div>
            )}
 
-           {/* RESULT STATE */}
            {!loading && displayImage && (
              <div className="flex-1 flex flex-col items-center justify-center animate-in zoom-in-95 duration-300 p-8 w-full">
                
-               {/* IMAGE FRAME WITH ANTI-THEFT OVERLAY */}
                <div className={`relative p-2 border-2 shadow-2xl mb-6 group bg-black border-green-900`}>
-                  
-                  {/* PREVIEW BADGE */}
                   {status === 'preview' && (
                     <div className={`absolute -top-3 -right-3 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-md z-30 ${activeTab === 'ai' ? 'bg-blue-600' : 'bg-red-600'}`}>
                         {activeTab === 'ai' ? <><Eye size={12}/> SAMPLE VIEW</> : <><Lock size={12}/> PREVIEW MODE</>}
                     </div>
                   )}
 
-                  {/* === THE RED CROSS (ANTI-SCREENSHOT) === */}
                   {status === 'preview' && (
                       <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none opacity-60">
                           <XCircle className="text-red-600 w-full h-full p-8" strokeWidth={1} />
@@ -373,7 +354,6 @@ export default function KyurGenDual() {
                   <img src={displayImage} alt="Result" className="w-full max-w-[280px] object-cover relative z-10" />
                </div>
 
-               {/* STATUS TEXT */}
                {status === 'preview' && (
                  <div className="text-center mb-6">
                     <div className="text-[10px] text-green-500 font-bold mb-2">
@@ -387,7 +367,6 @@ export default function KyurGenDual() {
                  </div>
                )}
 
-               {/* CONTROLS */}
                <div className="w-full max-w-sm space-y-3">
                  {status === 'preview' ? (
                     <>
@@ -409,7 +388,6 @@ export default function KyurGenDual() {
         </div>
       </main>
 
-      {/* SEO SECTION */}
       <section className="max-w-4xl mx-auto px-6 py-12 border-t border-green-900 mb-12">
         <h2 className="text-2xl font-black text-white mb-8 tracking-tighter">WHY CHOOSE KYURGEN_GHOST?</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs text-green-700 leading-relaxed">
@@ -428,7 +406,6 @@ export default function KyurGenDual() {
         </div>
       </section>
 
-      {/* PROFESSIONAL FOOTER */}
       <footer className={`border-t py-12 transition-colors duration-500 bg-black border-green-900`}>
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2 space-y-4">
