@@ -29,7 +29,7 @@ export default function Contact() {
                 <div className={`p-6 border rounded hover:bg-green-500/10 transition-colors ${isDark ? 'border-green-500/30' : 'border-gray-200'}`}>
                     <Mail className="mb-4 opacity-70" />
                     <h3 className="font-bold text-sm uppercase tracking-widest mb-1">Electronic Mail</h3>
-                    <p className="opacity-80">keshav@sparsh-mukthi.xyz</p>
+                    <p className="opacity-80">keshav@hikat.xyz</p>
                 </div>
 
                 <div className={`p-6 border rounded hover:bg-green-500/10 transition-colors ${isDark ? 'border-green-500/30' : 'border-gray-200'}`}>

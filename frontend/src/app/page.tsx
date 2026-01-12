@@ -434,7 +434,7 @@ export default function KyurGenDual() {
               </a>
               <div className="flex items-center gap-1 mt-2">
                 <span>under</span>
-                <a href="https://hikat.company" target="_blank" className={`font-bold hover:underline text-white`}>HIKAT</a>
+                <a href="https://hikat.xyz/" target="_blank" className={`font-bold hover:underline text-white`}>HIKAT</a>
               </div>
             </div>
             <div className="flex gap-4 mt-2">
